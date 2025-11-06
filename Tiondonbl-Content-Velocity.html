@@ -1,1 +1,402 @@
-https://g.co/gemini/share/758ceefcaf0b
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Velocity - AI Content Generator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            transition: background-color 0.3s;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+        }
+        .generate-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+        .loading-ring {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            width: 1.5rem;
+            height: 1.5rem;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .pro-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background-color: #fcd34d; /* Amber-300 */
+            color: #92400e; /* Amber-900 */
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white shadow-2xl rounded-xl p-6 md:p-8">
+        <header class="mb-6 text-center">
+            <h1 class="text-4xl font-extrabold gradient-text bg-clip-text text-transparent gradient-bg mb-2">
+                Content Velocity
+            </h1>
+            <p class="text-gray-600">Instantly generate high-converting marketing content using AI.</p>
+            <div class="mt-2 flex items-center justify-center space-x-2 text-sm text-gray-400">
+                <span>User ID: <span id="user-id" class="font-mono text-blue-500">Authenticating...</span></span>
+                <span id="pro-status" class="hidden pro-badge">PRO Unlimited</span>
+            </div>
+        </header>
+
+        <!-- Input Form -->
+        <div class="space-y-4">
+            <!-- Content Topic Input -->
+            <div>
+                <label for="topic" class="block text-sm font-medium text-gray-700 mb-1">Topic or Product Description</label>
+                <textarea id="topic" rows="3" placeholder="E.g., A new lightweight coffee mug that keeps drinks hot for 12 hours. The target audience is remote workers." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150"></textarea>
+            </div>
+
+            <!-- Content Type Selector -->
+            <div>
+                <label for="format" class="block text-sm font-medium text-gray-700 mb-1">Select Content Format</label>
+                <select id="format" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150 bg-white appearance-none">
+                    <option value="twitter_thread">Viral Twitter Thread (5-7 tweets)</option>
+                    <option value="linkedin_post">High-Engagement LinkedIn Post</option>
+                    <option value="product_description">E-commerce Product Description (Focus: FOMO)</option>
+                    <option value="newsletter_intro">Newsletter Introduction Hook</option>
+                </select>
+            </div>
+
+            <!-- Generate Button -->
+            <button id="generate-button" class="generate-btn w-full flex items-center justify-center py-3 px-4 rounded-lg text-white font-semibold shadow-lg gradient-bg hover:shadow-xl disabled:opacity-60" onclick="handleGeneration()">
+                <span id="button-text">Generate Content</span>
+                <div id="loading-spinner" class="loading-ring hidden ml-3"></div>
+            </button>
+            <p id="usage-status" class="text-center text-sm text-gray-500 mt-2">Loading usage...</p>
+        </div>
+
+        <!-- Output Display Area -->
+        <div id="results-card" class="mt-8 pt-6 border-t border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Generated Content</h2>
+            <div id="output-text" class="min-h-20 p-4 bg-gray-50 border border-gray-200 rounded-lg whitespace-pre-wrap text-gray-700 leading-relaxed text-sm">
+                <!-- Content will appear here -->
+                <p class="text-center text-gray-400">Your generated content will appear here.</p>
+            </div>
+            <div id="citation-area" class="mt-4 text-xs text-gray-500 hidden">
+                <p class="font-semibold mb-1">Sources Used (Grounding Data):</p>
+                <ul id="sources-list" class="list-disc list-inside space-y-1"></ul>
+            </div>
+        </div>
+
+        <!-- Upgrade Modal (Hidden by default) -->
+        <div id="upgrade-modal" class="modal-overlay">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md transform transition-all scale-100">
+                <h3 class="text-2xl font-bold text-red-600 mb-4">Limit Reached!</h3>
+                <p class="text-gray-700 mb-4">You have reached the free limit of 3 generations for today. To continue creating unlimited, high-quality content, please upgrade to **Content Velocity Pro**.</p>
+                <div class="space-y-2 mb-6">
+                    <p class="font-semibold">✨ Pro Features:</p>
+                    <ul class="list-disc list-inside text-gray-600 ml-4">
+                        <li>Unlimited daily content generations.</li>
+                        <li>Access to premium content formats.</li>
+                        <li>Priority support.</li>
+                    </ul>
+                </div>
+                <!-- VITAL: PASTE YOUR STRIPE TEST PAYMENT LINK URL BELOW, replacing the text in ALL CAPS -->
+                <button onclick="window.open(https://buy.stripe.com/test_00waEX0012100eiadxdIA00)" class="w-full py-3 rounded-lg text-white font-semibold bg-green-500 hover:bg-green-600 transition duration-150">
+                    Upgrade to Pro Now ($9/month)
+                </button>
+                <button onclick="document.getElementById('upgrade-modal').classList.remove('open')" class="w-full mt-2 py-2 text-gray-600 hover:text-gray-800 transition duration-150">
+                    Maybe later
+                </button>
+            </div>
+        </div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, addDoc, getDoc, query, where, Timestamp, connectFirestoreEmulator, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('Debug'); // Enable Firestore logging
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let userIsPro = false;
+        let generationsToday = 0;
+        const FREE_LIMIT = 3;
+
+        // Utility to get the start of the current day as a Firebase Timestamp
+        const getStartOfDayTimestamp = () => {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            return Timestamp.fromDate(now);
+        };
+
+        // Function to update the usage status display
+        const updateUsageDisplay = () => {
+            const statusEl = document.getElementById('usage-status');
+            const proBadgeEl = document.getElementById('pro-status');
+
+            if (userIsPro) {
+                statusEl.textContent = 'Status: PRO Unlimited Content Generation!';
+                statusEl.classList.remove('text-gray-500');
+                statusEl.classList.add('text-green-600', 'font-bold');
+                proBadgeEl.classList.remove('hidden');
+            } else {
+                const remaining = FREE_LIMIT - generationsToday;
+                statusEl.textContent = `Free Generations Remaining: ${remaining}/${FREE_LIMIT}`;
+                statusEl.classList.remove('text-green-600', 'font-bold');
+                statusEl.classList.add('text-gray-500');
+                if (remaining <= 0) {
+                     statusEl.textContent = 'Free Limit Reached! Upgrade for more.';
+                     statusEl.classList.add('text-red-500');
+                }
+                proBadgeEl.classList.add('hidden');
+            }
+        };
+
+        // Function to check user's subscription and daily usage
+        const checkUsageAndSubscription = async () => {
+             if (!db || !userId) {
+                console.log("Database or User ID not ready.");
+                return false;
+             }
+
+             // 1. Check Pro Status
+             const accountRef = doc(db, `artifacts/${appId}/users/${userId}/account/status`);
+             try {
+                const accountSnap = await getDoc(accountRef);
+                userIsPro = accountSnap.exists() && accountSnap.data().isPro === true;
+             } catch (e) {
+                console.error("Error reading account status:", e);
+                // Assume not Pro if read fails
+                userIsPro = false;
+             }
+
+             // 2. Count Daily Generations (only if not Pro)
+             if (!userIsPro) {
+                 const startOfDay = getStartOfDayTimestamp();
+                 const generationsColRef = collection(db, `artifacts/${appId}/users/${userId}/generations`);
+                 const q = query(generationsColRef, where("timestamp", ">=", startOfDay));
+
+                 try {
+                     const snapshot = await getDocs(q);
+                     generationsToday = snapshot.size;
+                 } catch (e) {
+                     console.error("Error counting generations:", e);
+                     generationsToday = 0; // Reset count on error
+                 }
+             } else {
+                generationsToday = 0; // Pro users have no practical limit to count
+             }
+
+             // 3. Update UI and Check Limit
+             updateUsageDisplay();
+
+             if (!userIsPro && generationsToday >= FREE_LIMIT) {
+                 document.getElementById('upgrade-modal').classList.add('open');
+                 return false; // Block generation
+             }
+
+             return true; // Allow generation
+        };
+
+        // --- Firebase Initialization and Authentication ---
+        const initFirebase = async () => {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in using the custom token or anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Wait for auth state to be resolved
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('user-id').textContent = userId;
+                        window.db = db; // Attach to window for global access
+                        window.auth = auth;
+                        window.userId = userId;
+                        window.appId = appId;
+                        checkUsageAndSubscription(); // Check usage once authenticated
+                    } else {
+                        // Should not happen, but fallback
+                        userId = crypto.randomUUID();
+                        document.getElementById('user-id').textContent = `Anon-${userId.substring(0, 8)}`;
+                        window.db = db;
+                        window.auth = auth;
+                        window.userId = userId;
+                        window.appId = appId;
+                        checkUsageAndSubscription();
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                document.getElementById('output-text').textContent = 'Error: Failed to initialize application services.';
+            }
+        };
+
+        // Initialize on load
+        initFirebase();
+
+        // --- Global function for API call and Persistence (Accessible to global script) ---
+        window.handleGeneration = async () => {
+            const topic = document.getElementById('topic').value.trim();
+            const format = document.getElementById('format').value;
+            const outputDiv = document.getElementById('output-text');
+            const button = document.getElementById('generate-button');
+            const buttonText = document.getElementById('button-text');
+            const spinner = document.getElementById('loading-spinner');
+            const citationArea = document.getElementById('citation-area');
+            const sourcesList = document.getElementById('sources-list');
+
+            if (!topic) {
+                outputDiv.textContent = "Please enter a topic or product description first.";
+                return;
+            }
+
+            // --- CRITICAL STEP 2: CHECK LIMIT ---
+            const canGenerate = await checkUsageAndSubscription();
+            if (!canGenerate) {
+                // The modal has already been shown in checkUsageAndSubscription
+                outputDiv.textContent = 'Please upgrade to Pro for unlimited access.';
+                return;
+            }
+
+            // Set loading state
+            button.disabled = true;
+            buttonText.textContent = 'Generating...';
+            spinner.classList.remove('hidden');
+            outputDiv.innerHTML = '<p class="text-center text-blue-500">Working magic, please wait...</p>';
+            citationArea.classList.add('hidden');
+            sourcesList.innerHTML = '';
+
+            const systemInstructions = {
+                'twitter_thread': "You are a viral Twitter content strategist. Write a concise, 5-7 tweet thread (starting with T1/7, T2/7, etc., including a strong hook and a Call To Action (CTA)) designed to maximize engagement and virality.",
+                'linkedin_post': "You are a professional LinkedIn marketer. Write a single, highly engaging post (maximum 10 lines) using good spacing and a clear, professional CTA to drive business leads.",
+                'product_description': "You are an expert e-commerce copywriter specializing in creating descriptions that trigger Fear Of Missing Out (FOMO). Write a 4-paragraph product description that highlights benefits, uses urgency, and includes strong selling keywords.",
+                'newsletter_intro': "You are a top-tier email marketing specialist. Write a 3-sentence, punchy introduction hook for a weekly newsletter that makes the reader want to keep scrolling. Keep the tone conversational and exciting."
+            };
+
+            const userQuery = `Generate content for the following topic: "${topic}". The format requested is: ${format}.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                // Premium feature: Use Google Search grounding to make the content relevant to current trends/data
+                tools: [{ "google_search": {} }],
+                systemInstruction: {
+                    parts: [{ text: systemInstructions[format] }]
+                },
+            };
+
+            const apiKey = ""; // API key is handled by the canvas environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            let generatedText = "Generation failed to return text.";
+            let sources = [];
+            let attempt = 0;
+            const maxAttempts = 5;
+            let success = false;
+
+            while (attempt < maxAttempts && !success) {
+                attempt++;
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        generatedText = candidate.content.parts[0].text;
+
+                        // Extract grounding sources
+                        const groundingMetadata = candidate.groundingMetadata;
+                        if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                            sources = groundingMetadata.groundingAttributions
+                                .map(attribution => ({
+                                    uri: attribution.web?.uri,
+                                    title: attribution.web?.title,
+                                }))
+                                .filter(source => source.uri && source.title);
+                        }
+                        success = true; // Break the loop on success
+                    } else {
+                        // If no text, treat as a temporary failure for backoff
+                        throw new Error("API returned no content.");
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${attempt} failed:`, error);
+                    if (attempt < maxAttempts) {
+                        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                        console.log(`Retrying in ${delay / 1000}s...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        generatedText = `Error: Content generation failed after ${maxAttempts} attempts. Please try again. (Details: ${error.message})`;
+                    }
+                }
+            }
+
+            // 1. Update UI
+            outputDiv.textContent = generatedText;
+
+            // 2. Display Sources
+            if (sources.length > 0) {
+                sources.forEach(source => {
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = source.uri;
+                    a.t
